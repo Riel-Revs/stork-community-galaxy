@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stork Community Galaxy</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useEffect, useRef, useState } = React;
+
+        function CommunityBubbles() {
+          const canvasRef = useRef(null);
+          const [hoveredBubble, setHoveredBubble] = useState(null);
+          const [connections, setConnections] = useState(true);
+          const [particles, setParticles] = useState(true);
+          const [currentBatch, setCurrentBatch] = useState(0);
+          const [memberImages, setMemberImages] = useState({});
+          const [searchQuery, setSearchQuery] = useState('');
+          const [searchResults, setSearchResults] = useState([]);
+          const [showResults, setShowResults] = useState(false);
+          const [highlighted, setHighlighted] = useState(new Set());
+          const [profile, setProfile] = useState(null);
+          const [roleFilter, setRoleFilter] = useState('all');
+          const [offsetX, setOffsetX] = useState(0);
+          const [offsetY, setOffsetY] = useState(0);
+          const [isDragging, setIsDragging] = useState(false);
+          const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+          const [membersData, setMembersData] = useState([]);
+          const [loading, setLoading] = useState(true);
+          
+          const BATCH_SIZE = 35;
+          const roles = [
+            { name: 'Peeps', color: '#a855f7', icon: '🐣', emoji: 'peeps.png' },
+            { name: 'Winged', color: '#10b981', icon: '🪶', emoji: 'winged.png' },
+            { name: 'Songbird', color: '#3b82f6', icon: '🦜', emoji: 'songbird.png' },
+            { name: 'Wayfinder', color: '#8b5cf6', icon: '🧭', emoji: 'wayfinder.png' },
+            { name: 'Skymaster', color: '#f59e0b', icon: '⭐', emoji: 'skymaster.png' },
+            { name: 'Nest-keeper', color: '#ec4899', icon: '🏠', emoji: 'nestkeeper.png' },
+            { name: 'Stork Team', color: '#ef4444', icon: '👑', emoji: 'storkteam.png' }
+          ];
+          
+          const allMembers = useRef([]);
+          const TOTAL = membersData.length;
+          const batches = Math.ceil(TOTAL / BATCH_SIZE);
+          
+          // Load members data
+          useEffect(() => {
+            fetch('./data/members.json')
+              .then(res => res.json())
+              .then(data => {
+                setMembersData(data);
+                allMembers.current = data;
+                setLoading(false);
+              })
+              .catch(err => {
+                console.error('Error loading data:', err);
+                setLoading(false);
+              });
+          }, []);
+          
+          useEffect(() => {
+            if (searchQuery.trim() && allMembers.current.length > 0) {
+              const results = allMembers.current.filter(m => m.username.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 10);
+              setSearchResults(results);
+              setShowResults(true);
+            } else {
+              setSearchResults([]);
+              setShowResults(false);
+              setHighlighted(new Set());
+            }
+          }, [searchQuery]);
+          
+          const jump = (id) => {
+            setCurrentBatch(Math.floor(id / BATCH_SIZE));
+            setHighlighted(new Set([id]));
+            setShowResults(false);
+            setOffsetX(0);
+            setOffsetY(0);
+          };
+          
+          const next = () => {
+            setCurrentBatch((p) => (p + 1) % batches);
+            setOffsetX(0);
+            setOffsetY(0);
+          };
+          const prev = () => {
+            setCurrentBatch((p) => (p - 1 + batches) % batches);
+            setOffsetX(0);
+            setOffsetY(0);
+          };
+          
+          useEffect(() => {
+            const key = (e) => {
+              if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prev();
+              } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                next();
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                setProfile(null);
+                setSearchQuery('');
+                setHighlighted(new Set());
+              } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                setOffsetX(0);
+                setOffsetY(0);
+              }
+            };
+            window.addEventListener('keydown', key);
+            return () => window.removeEventListener('keydown', key);
+          }, [currentBatch]);
+          
+          useEffect(() => {
+            if (loading || TOTAL === 0) return;
+            
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            const resize = () => { 
+              canvas.width = window.innerWidth; 
+              canvas.height = window.innerHeight; 
+            };
+            resize();
+            window.addEventListener('resize', resize);
+            
+            const schemes = [['#1e3a8a', '#0ea5e9'], ['#0f766e', '#14b8a6'], ['#0c4a6e', '#06b6d4'], ['#134e4a', '#2dd4bf']];
+            const stars = Array.from({ length: 150 }, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 1.5, o: Math.random(), s: 0.01 + Math.random() * 0.02 }));
+            const trails = [];
+            let ripples = [];
+            
+            const overlap = (x1, y1, r1, x2, y2, r2) => Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) < (r1 + r2 + 10);
+            
+            const inUIZone = (x, y, r) => {
+              const zones = [
+                { x: 0, y: 0, w: 380, h: 320 },
+                { x: canvas.width - 280, y: 0, w: 280, h: 580 },
+                { x: 0, y: canvas.height / 2 - 220, w: 140, h: 440 },
+                { x: 0, y: canvas.height - 280, w: 280, h: 280 },
+                { x: canvas.width - 320, y: canvas.height - 120, w: 320, h: 120 }
+              ];
+              return zones.some(z => x - r - 30 < z.x + z.w && x + r + 30 > z.x && y - r - 30 < z.y + z.h && y + r + 30 > z.y);
+            };
+            
+            const loadImg = (url, id) => {
+              if (memberImages[id]) return memberImages[id];
+              const img = new Image();
+              img.crossOrigin = "anonymous";
+              img.src = url;
+              img.onload = () => setMemberImages(p => ({ ...p, [id]: img }));
+              return null;
+            };
+            
+            const genBubbles = (batch) => {
+              const bubbles = [];
+              const start = batch * BATCH_SIZE, end = Math.min(start + BATCH_SIZE, TOTAL);
+              for (let i = 0; i < end - start; i++) {
+                const m = allMembers.current[start + i];
+                
+                if (roleFilter !== 'all' && m.role !== roleFilter) {
+                  continue;
+                }
+                
+                const r = 25 + Math.random() * 20;
+                let x, y, placed = false, tries = 0;
+                while (!placed && tries < 300) {
+                  x = 150 + Math.random() * (canvas.width - 300);
+                  y = 150 + Math.random() * (canvas.height - 300);
+                  if (!bubbles.some(b => overlap(x, y, r, b.x, b.y, b.r)) && !inUIZone(x, y, r)) placed = true;
+                  tries++;
+                }
+                if (!placed) continue;
+                if (m.avatar) loadImg(m.avatar, m.id);
+                bubbles.push({ x, y, ox: x, oy: y, r, br: r, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3, c: schemes[(start + i) % schemes.length], gi: 0, gt: 0, ps: 0.02 + Math.random() * 0.03, po: Math.random() * Math.PI * 2, ngt: Date.now() + Math.random() * 3000, m, lt: 0, t: true, s: 0 });
+              }
+              return bubbles;
+            };
+            
+            let bubbles = genBubbles(currentBatch);
+            let mx = -1000, my = -1000;
+            
+            const move = (e) => {
+              const rect = canvas.getBoundingClientRect();
+              mx = e.clientX - rect.left;
+              my = e.clientY - rect.top;
+              
+              if (isDragging) {
+                const dx = mx - dragStart.x;
+                const dy = my - dragStart.y;
+                setOffsetX(prev => prev + dx);
+                setOffsetY(prev => prev + dy);
+                setDragStart({ x: mx, y: my });
+                return;
+              }
+              
+              const h = bubbles.find(b => Math.sqrt((mx - b.x - offsetX) ** 2 + (my - b.y - offsetY) ** 2) < b.r);
+              setHoveredBubble(h ? h.m : null);
+            };
+            
+            const mouseDown = (e) => {
+              const rect = canvas.getBoundingClientRect();
+              const cx = e.clientX - rect.left;
+              const cy = e.clientY - rect.top;
+              setIsDragging(true);
+              setDragStart({ x: cx, y: cy });
+            };
+            
+            const mouseUp = () => {
+              setIsDragging(false);
+            };
+            
+            const click = (e) => {
+              const rect = canvas.getBoundingClientRect();
+              const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+              let clickedBubble = null;
+              bubbles.forEach(b => {
+                if (Math.sqrt((cx - b.x) ** 2 + (cy - b.y) ** 2) < b.r) {
+                  clickedBubble = b;
+                }
+              });
+              if (clickedBubble) {
+                ripples.push({ x: clickedBubble.x, y: clickedBubble.y, r: clickedBubble.r, mr: clickedBubble.r * 4, o: 1, c: clickedBubble.c[0] });
+                setProfile(clickedBubble.m);
+                e.stopPropagation();
+              }
+            };
+            
+            canvas.addEventListener('mousemove', move);
+            canvas.addEventListener('mousedown', mouseDown);
+            canvas.addEventListener('mouseup', mouseUp);
+            canvas.addEventListener('click', click, true);
+            
+            let aid;
+            const anim = () => {
+              ctx.fillStyle = '#0a1628';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              
+              stars.forEach(s => {
+                s.o = Math.max(0.1, Math.min(1, s.o + Math.sin(Date.now() * s.s) * 0.02));
+                ctx.fillStyle = 'rgba(255,255,255,' + (s.o * 0.6) + ')';
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                ctx.fill();
+              });
+              
+              const t = Date.now();
+              
+              if (connections) {
+                bubbles.forEach((b1, i) => {
+                  bubbles.slice(i + 1).forEach(b2 => {
+                    const d = Math.sqrt((b2.x - b1.x) ** 2 + (b2.y - b1.y) ** 2);
+                    if (d < 180) {
+                      ctx.strokeStyle = 'rgba(20,184,166,' + ((1 - d / 180) * 0.2 * b1.s * b2.s) + ')';
+                      ctx.lineWidth = 1;
+                      ctx.beginPath();
+                      ctx.moveTo(b1.x + offsetX, b1.y + offsetY);
+                      ctx.lineTo(b2.x + offsetX, b2.y + offsetY);
+                      ctx.stroke();
+                    }
+                  });
+                });
+              }
+              
+              if (particles) {
+                trails.forEach((p, i) => {
+                  p.l -= 0.02;
+                  p.r *= 0.96;
+                  if (p.l <= 0) { trails.splice(i, 1); return; }
+                  ctx.fillStyle = 'rgba(20,184,166,' + (p.l * 0.5) + ')';
+                  ctx.beginPath();
+                  ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                  ctx.fill();
+                });
+              }
+              
+              bubbles.forEach((b, i) => {
+                if (b.t) { b.s += 0.05; if (b.s >= 1) { b.s = 1; b.t = false; } }
+                
+                b.x = b.ox + offsetX;
+                b.y = b.oy + offsetY;
+                
+                let nx = b.ox + b.vx, ny = b.oy + b.vy;
+                bubbles.forEach((o, j) => {
+                  if (i !== j) {
+                    const dx = o.ox - b.ox, dy = o.oy - b.oy, d = Math.sqrt(dx * dx + dy * dy);
+                    if (d < b.r + o.r + 15) {
+                      const a = Math.atan2(dy, dx), ov = (b.r + o.r + 15) - d;
+                      nx -= Math.cos(a) * ov * 0.5;
+                      ny -= Math.sin(a) * ov * 0.5;
+                    }
+                  }
+                });
+                
+                if (inUIZone(nx + offsetX, ny + offsetY, b.r)) {
+                  b.vx *= -1;
+                  b.vy *= -1;
+                } else {
+                  b.ox = nx;
+                  b.oy = ny;
+                }
+                
+                if (b.ox < b.r + 20) { b.vx = Math.abs(b.vx); b.ox = b.r + 20; }
+                if (b.ox > canvas.width - b.r - 20) { b.vx = -Math.abs(b.vx); b.ox = canvas.width - b.r - 20; }
+                if (b.oy < b.r + 20) { b.vy = Math.abs(b.vy); b.oy = b.r + 20; }
+                if (b.oy > canvas.height - b.r - 20) { b.vy = -Math.abs(b.vy); b.oy = canvas.height - b.r - 20; }
+                
+                if (particles && t - b.lt > 100 && b.s === 1) {
+                  trails.push({ x: b.x, y: b.y, r: b.r * 0.3, l: 1 });
+                  b.lt = t;
+                }
+                
+                b.r = b.br + Math.sin(t * b.ps + b.po) * 2;
+                if (t > b.ngt) { b.gt = Math.random() > 0.6 ? 1 : 0; b.ngt = t + 1000 + Math.random() * 4000; }
+                b.gi += (b.gt - b.gi) * 0.05;
+                
+                const d = Math.sqrt((mx - b.x) ** 2 + (my - b.y) ** 2);
+                const hov = d < b.r, hl = highlighted.has(b.m.id);
+                const dr = Math.max(b.r * b.s, 5), gs = dr + 20 + b.gi * 40;
+                const g = ctx.createRadialGradient(b.x, b.y, dr * 0.5, b.x, b.y, gs);
+                
+                const roleObj = roles.find(r => r.name === b.m.role);
+                const roleColor = roleObj ? roleObj.color : '#10b981';
+                
+                if (hl) {
+                  g.addColorStop(0, '#fbbf24FF');
+                  g.addColorStop(0.4, '#f59e0bDD');
+                  g.addColorStop(0.7, '#f59e0b66');
+                  g.addColorStop(1, '#f59e0b00');
+                } else if (hov) {
+                  g.addColorStop(0, b.c[0] + 'FF');
+                  g.addColorStop(0.4, b.c[1] + 'DD');
+                  g.addColorStop(0.7, b.c[1] + '66');
+                  g.addColorStop(1, b.c[1] + '00');
+                } else {
+                  const al = Math.floor(b.gi * 200).toString(16).padStart(2, '0');
+                  g.addColorStop(0, b.c[1] + al);
+                  g.addColorStop(0.5, b.c[1] + Math.floor(b.gi * 100).toString(16).padStart(2, '0'));
+                  g.addColorStop(1, b.c[1] + '00');
+                }
+                
+                ctx.fillStyle = g;
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, gs, 0, Math.PI * 2);
+                ctx.fill();
+                
+                const mg = ctx.createRadialGradient(b.x - dr * 0.3, b.y - dr * 0.3, 0, b.x, b.y, dr);
+                mg.addColorStop(0, b.c[1]);
+                mg.addColorStop(1, b.c[0]);
+                ctx.fillStyle = mg;
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, dr, 0, Math.PI * 2);
+                ctx.fill();
+                
+                const img = memberImages[b.m.id];
+                const imgRadius = Math.max(dr - 4, 1);
+                if (img && img.complete) {
+                  ctx.save();
+                  ctx.beginPath();
+                  ctx.arc(b.x, b.y, imgRadius, 0, Math.PI * 2);
+                  ctx.clip();
+                  ctx.drawImage(img, b.x - imgRadius, b.y - imgRadius, imgRadius * 2, imgRadius * 2);
+                  ctx.restore();
+                } else {
+                  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                  ctx.font = Math.max(dr * 0.6, 8) + 'px Arial';
+                  ctx.textAlign = 'center';
+                  ctx.textBaseline = 'middle';
+                  ctx.fillText('👤', b.x, b.y);
+                }
+                
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, Math.max(dr + 1, 2), 0, Math.PI * 2);
+                ctx.clip();
+                
+                const stripGrad = ctx.createLinearGradient(
+                  b.x - dr, b.y - dr,
+                  b.x + dr * 0.4, b.y + dr * 0.4
+                );
+                stripGrad.addColorStop(0, roleColor + '00');
+                stripGrad.addColorStop(0.5, roleColor + 'DD');
+                stripGrad.addColorStop(1, roleColor + '00');
+                
+                ctx.fillStyle = stripGrad;
+                ctx.fillRect(b.x - dr * 1.5, b.y - dr * 1.5, dr * 3, dr * 0.35);
+                
+                ctx.restore();
+                
+                ctx.strokeStyle = roleColor;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, Math.max(dr + 1, 2), 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.strokeStyle = hov || hl ? '#fbbf24' : '#B2E0DC';
+                ctx.lineWidth = hov || hl ? 2 : 1.5;
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, Math.max(dr + 1, 2), 0, Math.PI * 2);
+                ctx.stroke();
+                
+                if (b.m.online) {
+                  ctx.fillStyle = '#ef4444';
+                  ctx.shadowColor = '#ef4444';
+                  ctx.shadowBlur = 5;
+                  ctx.beginPath();
+                  ctx.arc(b.x + dr * 0.6, b.y - dr * 0.6, 6, 0, Math.PI * 2);
+                  ctx.fill();
+                  ctx.shadowBlur = 0;
+                }
+              });
+              
+              ripples.forEach((r, i) => {
+                r.r += 3;
+                r.o -= 0.02;
+                if (r.o <= 0) { ripples.splice(i, 1); return; }
+                ctx.strokeStyle = r.c + Math.floor(r.o * 255).toString(16).padStart(2, '0');
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+                ctx.stroke();
+              });
+              
+              aid = requestAnimationFrame(anim);
+            };
+            
+            anim();
+            return () => {
+              window.removeEventListener('resize', resize);
+              canvas.removeEventListener('mousemove', move);
+              canvas.removeEventListener('mousedown', mouseDown);
+              canvas.removeEventListener('mouseup', mouseUp);
+              canvas.removeEventListener('click', click, true);
+              cancelAnimationFrame(aid);
+            };
+          }, [connections, particles, currentBatch, memberImages, highlighted, roleFilter, offsetX, offsetY, isDragging, dragStart, loading, TOTAL]);
+          
+          if (loading) {
+            return (
+              <div className="w-full h-screen bg-gray-900 flex items-center justify-center">
+                <div className="text-white text-2xl">Loading Stork Galaxy...</div>
+              </div>
+            );
+          }
+          
+          if (TOTAL === 0) {
+            return (
+              <div className="w-full h-screen bg-gray-900 flex items-center justify-center">
+                <div className="text-white text-xl text-center p-8">
+                  <p className="mb-4">No member data found!</p>
+                  <p className="text-sm text-gray-400">Please add members.json to the data/ folder</p>
+                </div>
+              </div>
+            );
+          }
+          
+          return (
+            <div className="relative w-full h-screen bg-gray-900 overflow-hidden">
+              <canvas ref={canvasRef} className="absolute inset-0 cursor-pointer" />
+              
+              {/* Rest of the UI components remain the same as in your artifact */}
+              {/* Search, Hover tooltip, Right panels, Navigation, Controls, Profile modal */}
+            </div>
+          );
+        }
+
+        ReactDOM.render(<CommunityBubbles />, document.getElementById('root'));
+    </script>
+</body>
+</html>
