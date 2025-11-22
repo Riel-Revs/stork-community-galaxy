@@ -8,55 +8,162 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>body { margin: 0; overflow: hidden; }</style>
+    <style>
+        body { margin: 0; overflow: hidden; }
+    </style>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-const { useEffect, useRef, useState } = React;
+        const { useEffect, useRef, useState } = React;
 
-function BubbleMap() {
-  const canvasRef = useRef(null);
-  const [members, setMembers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [batch, setBatch] = useState(0);
-  const BATCH_SIZE = 35;
-  const batches = Math.ceil(members.length / BATCH_SIZE);
+        function CommunityBubbles() {
+          const canvasRef = useRef(null);
+          const [hoveredBubble, setHoveredBubble] = useState(null);
+          const [connections, setConnections] = useState(true);
+          const [particles, setParticles] = useState(true);
+          const [currentBatch, setCurrentBatch] = useState(0);
+          const [memberImages, setMemberImages] = useState({});
+          const [searchQuery, setSearchQuery] = useState('');
+          const [searchResults, setSearchResults] = useState([]);
+          const [showResults, setShowResults] = useState(false);
+          const [highlighted, setHighlighted] = useState(new Set());
+          const [profile, setProfile] = useState(null);
+          const [roleFilter, setRoleFilter] = useState('all');
+          const [offsetX, setOffsetX] = useState(0);
+          const [offsetY, setOffsetY] = useState(0);
+          const [isDragging, setIsDragging] = useState(false);
+          const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+          const [membersData, setMembersData] = useState([]);
+          const [loading, setLoading] = useState(true);
+          
+          const BATCH_SIZE = 35;
+          const roles = [
+            { name: 'Peeps', color: '#a855f7', icon: '🐣', emoji: 'assets/peeps.png' },
+            { name: 'Winged', color: '#10b981', icon: '🪶', emoji: 'assets/winged.png' },
+            { name: 'Songbird', color: '#3b82f6', icon: '🦜', emoji: 'assets/songbird.png' },
+            { name: 'Wayfinder', color: '#8b5cf6', icon: '🧭', emoji: 'assets/wayfinder.png' },
+            { name: 'Skymaster', color: '#f59e0b', icon: '⭐', emoji: 'assets/skymaster.png' },
+            { name: 'Nest-keeper', color: '#ec4899', icon: '🏠', emoji: 'assets/nestkeeper.png' },
+            { name: 'Stork Team', color: '#ef4444', icon: '👑', emoji: 'assets/storkteam.png' }
+          ];
+          
+          const allMembers = useRef([]);
+          const TOTAL = membersData.length;
+          const batches = Math.ceil(TOTAL / BATCH_SIZE);
+          
+          useEffect(() => {
+            fetch('./data/members.json')
+              .then(res => res.json())
+              .then(data => {
+                setMembersData(data);
+                allMembers.current = data;
+                setLoading(false);
+              })
+              .catch(err => {
+                console.error('Error loading data:', err);
+                setLoading(false);
+              });
+          }, []);
+useEffect(() => {
+            if (searchQuery.trim() && allMembers.current.length > 0) {
+              const results = allMembers.current.filter(m => m.username.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 10);
+              setSearchResults(results);
+              setShowResults(true);
+            } else {
+              setSearchResults([]);
+              setShowResults(false);
+              setHighlighted(new Set());
+            }
+          }, [searchQuery]);
+          
+          const jump = (id) => {
+            setCurrentBatch(Math.floor(id / BATCH_SIZE));
+            setHighlighted(new Set([id]));
+            setShowResults(false);
+            setOffsetX(0);
+            setOffsetY(0);
+          };
+          
+          const next = () => {
+            setCurrentBatch((p) => (p + 1) % batches);
+            setOffsetX(0);
+            setOffsetY(0);
+          };
+          const prev = () => {
+            setCurrentBatch((p) => (p - 1 + batches) % batches);
+            setOffsetX(0);
+            setOffsetY(0);
+          };
+          
+          useEffect(() => {
+            const key = (e) => {
+              if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+              else if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
+              else if (e.key === 'Escape') { e.preventDefault(); setProfile(null); setSearchQuery(''); setHighlighted(new Set()); }
+              else if (e.key === 'r' || e.key === 'R') { e.preventDefault(); setOffsetX(0); setOffsetY(0); }
+            };
+            window.addEventListener('keydown', key);
+            return () => window.removeEventListener('keydown', key);
+          }, [currentBatch, batches]);
+          
+          if (loading) {
+            return React.createElement('div', { className: "w-full h-screen bg-gray-900 flex items-center justify-center" },
+              React.createElement('div', { className: "text-white text-2xl" }, 'Loading Stork Galaxy...')
+            );
+          }
+          
+          if (TOTAL === 0) {
+            return React.createElement('div', { className: "w-full h-screen bg-gray-900 flex items-center justify-center" },
+              React.createElement('div', { className: "text-white text-xl text-center p-8" },
+                React.createElement('p', { className: "mb-4" }, 'No member data found!'),
+                React.createElement('p', { className: "text-sm text-gray-400" }, 'Please add members.json to the data/ folder')
+              )
+            );
+          }
+          
+          return (
+            <div className="relative w-full h-screen bg-gray-900 overflow-hidden">
+              <canvas ref={canvasRef} className="absolute inset-0 cursor-pointer" />
+              
+              <div className="absolute top-2 left-2 sm:top-4 sm:left-4 w-64 sm:w-72 md:w-80 z-10">
+                <div className="bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl border border-teal-500/30 shadow-xl">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <input type="text" placeholder="Search members..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 bg-transparent outline-none text-xs sm:text-sm" />
+                    {searchQuery && <button onClick={() => setSearchQuery('')} className="text-teal-400"><svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>}
+                  </div>
+                </div>
+                {showResults && searchResults.length > 0 && (
+                  <div className="mt-2 bg-slate-900/95 backdrop-blur-sm rounded-xl border border-teal-500/30 shadow-xl max-h-48 sm:max-h-64 overflow-y-auto">
+                    {searchResults.map(m => (
+                      <button key={m.id} onClick={() => jump(m.id)} className="w-full px-3 py-2 text-left hover:bg-teal-900/50 flex items-center gap-2 border-b border-teal-500/10 last:border-0">
+                        <span className="text-lg sm:text-2xl">{roles.find(r => r.name === m.role)?.icon || '👤'}</span>
+                        <div className="flex-1"><p className="text-xs sm:text-sm font-semibold text-white">{m.username}</p><p className="text-xs text-teal-300">{m.role}</p></div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <div className="absolute top-1/2 left-2 sm:left-4 -translate-y-1/2 flex flex-col gap-2 sm:gap-3 z-10">
+                <button onClick={prev} className="bg-slate-900/90 backdrop-blur-sm text-white p-2 sm:p-3 rounded-full border-2 border-teal-500/40 hover:bg-teal-900/90 shadow-lg"><svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg></button>
+                <div className="bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl border-2 border-teal-500/40 text-center shadow-lg"><p className="text-xs text-teal-300 font-semibold">BATCH</p><p className="text-base sm:text-lg font-bold">{currentBatch + 1}<span className="text-xs sm:text-sm text-teal-400">/{batches}</span></p></div>
+                <button onClick={next} className="bg-slate-900/90 backdrop-blur-sm text-white p-2 sm:p-3 rounded-full border-2 border-teal-500/40 hover:bg-teal-900/90 shadow-lg"><svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></button>
+              </div>
+              
+              <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-5 sm:py-3 rounded-xl border border-teal-500/30 shadow-xl z-10">
+                <p className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+                  <img src="assets/stork-logo.png" alt="Stork" className="w-5 h-5" onError={(e) => e.target.style.display = 'none'} />
+                  <span className="font-semibold">Stork Community Galaxy</span>
+                </p>
+                <p className="text-xs text-teal-300 mt-0.5 sm:mt-1">← → arrows • Drag to pan • R to reset</p>
+              </div>
+            </div>
+          );
+        }
 
-  useEffect(() => {
-    fetch('./data/members.json')
-      .then(r => r.json())
-      .then(data => { setMembers(data); setLoading(false); })
-      .catch(e => { alert('Error loading members.json: ' + e); setLoading(false); });
-  }, []);
-
-  if (loading) return <div className="h-screen bg-gray-900 flex items-center justify-center text-white text-2xl">Loading...</div>;
-  if (members.length === 0) return <div className="h-screen bg-gray-900 flex items-center justify-center text-white text-xl">No members found!</div>;
-
-  return (
-    <div className="relative h-screen bg-gray-900 overflow-hidden">
-      <canvas ref={canvasRef} className="absolute inset-0" />
-      
-      <div className="absolute top-4 left-4 bg-slate-900/90 text-white px-4 py-2 rounded-xl z-10">
-        <p className="font-bold">Stork Galaxy</p>
-        <p className="text-xs text-teal-300">{members.length} members loaded</p>
-      </div>
-
-      <div className="absolute top-1/2 left-4 -translate-y-1/2 flex flex-col gap-2 z-10">
-        <button onClick={() => setBatch(p => (p - 1 + batches) % batches)} 
-          className="bg-slate-900/90 text-white p-3 rounded-full">←</button>
-        <div className="bg-slate-900/90 text-white px-3 py-2 rounded-xl text-center">
-          <p className="text-xs text-teal-300">BATCH</p>
-          <p className="font-bold">{batch + 1}/{batches}</p>
-        </div>
-        <button onClick={() => setBatch(p => (p + 1) % batches)}
-          className="bg-slate-900/90 text-white p-3 rounded-full">→</button>
-      </div>
-    </div>
-  );
-}
-
-ReactDOM.render(<BubbleMap />, document.getElementById('root'));
+        ReactDOM.render(React.createElement(CommunityBubbles), document.getElementById('root'));
     </script>
 </body>
 </html>
