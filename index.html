@@ -8,120 +8,55 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { margin: 0; overflow: hidden; }
-    </style>
+    <style>body { margin: 0; overflow: hidden; }</style>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        const { useEffect, useRef, useState } = React;
-        function CommunityBubbles() {
-          const canvasRef = useRef(null);
-          const [hoveredBubble, setHoveredBubble] = useState(null);
-          const [connections, setConnections] = useState(true);
-          const [particles, setParticles] = useState(true);
-          const [currentBatch, setCurrentBatch] = useState(0);
-          const [memberImages, setMemberImages] = useState({});
-          const [searchQuery, setSearchQuery] = useState('');
-          const [searchResults, setSearchResults] = useState([]);
-          const [showResults, setShowResults] = useState(false);
-          const [highlighted, setHighlighted] = useState(new Set());
-          const [profile, setProfile] = useState(null);
-          const [roleFilter, setRoleFilter] = useState('all');
-          const [offsetX, setOffsetX] = useState(0);
-          const [offsetY, setOffsetY] = useState(0);
-          const [isDragging, setIsDragging] = useState(false);
-          const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-          const [membersData, setMembersData] = useState([]);
-          const [loading, setLoading] = useState(true);
-          const BATCH_SIZE = 35;
-          const roles = [
-            { name: 'Peeps', color: '#a855f7', icon: '🐣' },
-            { name: 'Winged', color: '#10b981', icon: '🪶' },
-            { name: 'Songbird', color: '#3b82f6', icon: '🦜' },
-            { name: 'Wayfinder', color: '#8b5cf6', icon: '🧭' },
-            { name: 'Skymaster', color: '#f59e0b', icon: '⭐' },
-            { name: 'Nest-keeper', color: '#ec4899', icon: '🏠' },
-            { name: 'Stork Team', color: '#ef4444', icon: '👑' }
-          ];
-          const allMembers = useRef([]);
-          const TOTAL = membersData.length;
-          const batches = Math.ceil(TOTAL / BATCH_SIZE);
-          useEffect(() => {
-            fetch('./data/members.json')
-              .then(res => res.json())
-              .then(data => {
-                setMembersData(data);
-                allMembers.current = data;
-                setLoading(false);
-              })
-              .catch(err => {
-                console.error('Error loading data:', err);
-                alert('Failed to load members.json. Make sure the file exists in the data/ folder.');
-                setLoading(false);
-              });
-          }, []);
-          useEffect(() => {
-            if (searchQuery.trim() && allMembers.current.length > 0) {
-              const results = allMembers.current.filter(m => m.username.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 10);
-              setSearchResults(results);
-              setShowResults(true);
-            } else {
-              setSearchResults([]);
-              setShowResults(false);
-              setHighlighted(new Set());
-            }
-          }, [searchQuery]);
-          const jump = (id) => {
-            setCurrentBatch(Math.floor(id / BATCH_SIZE));
-            setHighlighted(new Set([id]));
-            setShowResults(false);
-            setOffsetX(0);
-            setOffsetY(0);
-          };
-          const next = () => {
-            setCurrentBatch((p) => (p + 1) % batches);
-            setOffsetX(0);
-            setOffsetY(0);
-          };
-          const prev = () => {
-            setCurrentBatch((p) => (p - 1 + batches) % batches);
-            setOffsetX(0);
-            setOffsetY(0);
-          };
-          useEffect(() => {
-            const key = (e) => {
-              if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
-              else if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
-              else if (e.key === 'Escape') { e.preventDefault(); setProfile(null); setSearchQuery(''); setHighlighted(new Set()); }
-              else if (e.key === 'r' || e.key === 'R') { e.preventDefault(); setOffsetX(0); setOffsetY(0); }
-            };
-            window.addEventListener('keydown', key);
-            return () => window.removeEventListener('keydown', key);
-          }, [currentBatch, batches]);
-          
-          if (loading) {
-            return React.createElement('div', { className: "w-full h-screen bg-gray-900 flex items-center justify-center" },
-              React.createElement('div', { className: "text-white text-2xl" }, 'Loading Stork Galaxy...')
-            );
-          }
-          if (TOTAL === 0) {
-            return React.createElement('div', { className: "w-full h-screen bg-gray-900 flex items-center justify-center" },
-              React.createElement('div', { className: "text-white text-xl text-center p-8" },
-                React.createElement('p', { className: "mb-4" }, 'No member data found!'),
-                React.createElement('p', { className: "text-sm text-gray-400" }, 'Check console for errors or make sure members.json exists in data/ folder')
-              )
-            );
-          }
-          
-          return React.createElement('div', { className: "relative w-full h-screen bg-gray-900 overflow-hidden" },
-            React.createElement('div', { className: "absolute inset-0 flex items-center justify-center text-white text-2xl" },
-              'Bubble map is loading... If you see this message, the canvas rendering is working!'
-            )
-          );
-        }
-        ReactDOM.render(React.createElement(CommunityBubbles), document.getElementById('root'));
+const { useEffect, useRef, useState } = React;
+
+function BubbleMap() {
+  const canvasRef = useRef(null);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [batch, setBatch] = useState(0);
+  const BATCH_SIZE = 35;
+  const batches = Math.ceil(members.length / BATCH_SIZE);
+
+  useEffect(() => {
+    fetch('./data/members.json')
+      .then(r => r.json())
+      .then(data => { setMembers(data); setLoading(false); })
+      .catch(e => { alert('Error loading members.json: ' + e); setLoading(false); });
+  }, []);
+
+  if (loading) return <div className="h-screen bg-gray-900 flex items-center justify-center text-white text-2xl">Loading...</div>;
+  if (members.length === 0) return <div className="h-screen bg-gray-900 flex items-center justify-center text-white text-xl">No members found!</div>;
+
+  return (
+    <div className="relative h-screen bg-gray-900 overflow-hidden">
+      <canvas ref={canvasRef} className="absolute inset-0" />
+      
+      <div className="absolute top-4 left-4 bg-slate-900/90 text-white px-4 py-2 rounded-xl z-10">
+        <p className="font-bold">Stork Galaxy</p>
+        <p className="text-xs text-teal-300">{members.length} members loaded</p>
+      </div>
+
+      <div className="absolute top-1/2 left-4 -translate-y-1/2 flex flex-col gap-2 z-10">
+        <button onClick={() => setBatch(p => (p - 1 + batches) % batches)} 
+          className="bg-slate-900/90 text-white p-3 rounded-full">←</button>
+        <div className="bg-slate-900/90 text-white px-3 py-2 rounded-xl text-center">
+          <p className="text-xs text-teal-300">BATCH</p>
+          <p className="font-bold">{batch + 1}/{batches}</p>
+        </div>
+        <button onClick={() => setBatch(p => (p + 1) % batches)}
+          className="bg-slate-900/90 text-white p-3 rounded-full">→</button>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.render(<BubbleMap />, document.getElementById('root'));
     </script>
 </body>
 </html>
