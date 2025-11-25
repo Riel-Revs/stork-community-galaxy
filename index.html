@@ -1,676 +1,698 @@
-import { useEffect, useRef, useState } from 'react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stork Community Galaxy</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { margin: 0; padding: 0; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useEffect, useRef, useState } = React;
 
-export default function CommunityBubbles() {
-  const canvasRef = useRef(null);
-  const [hoveredBubble, setHoveredBubble] = useState(null);
-  const [connections, setConnections] = useState(true);
-  const [particles, setParticles] = useState(true);
-  const [currentBatch, setCurrentBatch] = useState(0);
-  const [memberImages, setMemberImages] = useState({});
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [showResults, setShowResults] = useState(false);
-  const [highlighted, setHighlighted] = useState(new Set());
-  const [profile, setProfile] = useState(null);
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [offsetX, setOffsetX] = useState(0);
-  const [offsetY, setOffsetY] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  
-  const BATCH_SIZE = 35, TOTAL = 6000, batches = Math.ceil(TOTAL / BATCH_SIZE);
-  const roles = [
-    { name: 'Peeps', color: '#a855f7', icon: '/assets/peeps.png' },
-    { name: 'Winged', color: '#10b981', icon: '/assets/winged.png' },
-    { name: 'Songbird', color: '#3b82f6', icon: '/assets/songbird.png' },
-    { name: 'Wayfinder', color: '#8b5cf6', icon: '/assets/wayfinder.png' },
-    { name: 'Skymaster', color: '#f59e0b', icon: '/assets/skymaster.png' },
-    { name: 'Nest-keeper', color: '#ec4899', icon: '/assets/nestkeeper.png' },
-    { name: 'Stork Team', color: '#ef4444', icon: '/assets/storkteam.png' }
-  ];
-  
-  const allMembers = useRef([]);
-  
-  useEffect(() => {
-    if (allMembers.current.length === 0) {
-      const pre = ['Shadow', 'Nova', 'Cyber', 'Lunar', 'Storm', 'Neon', 'Pixel', 'Cosmic'];
-      const suf = ['Wolf', 'Dragon', 'Phoenix', 'Tiger', 'Hawk', 'Viper', 'Fox', 'Lion'];
-      const num = ['', '77', '420', '69', '1337', '404'];
-      for (let i = 0; i < TOTAL; i++) {
-        let role, eggs;
-        const rand = Math.random();
-        
-        if (rand < 0.02) {
-          role = roles[6];
-          eggs = Math.floor(Math.random() * 2000000);
-        } else if (rand < 0.07) {
-          role = roles[5];
-          eggs = Math.floor(Math.random() * 2000000);
-        } else {
-          const eggRand = Math.random();
-          if (eggRand < 0.3) {
-            eggs = Math.floor(Math.random() * 15000);
-            role = roles[0];
-          } else if (eggRand < 0.55) {
-            eggs = 15000 + Math.floor(Math.random() * 60000);
-            role = roles[1];
-          } else if (eggRand < 0.75) {
-            eggs = 75000 + Math.floor(Math.random() * 175000);
-            role = roles[2];
-          } else if (eggRand < 0.9) {
-            eggs = 250000 + Math.floor(Math.random() * 500000);
-            role = roles[3];
-          } else {
-            eggs = 750000 + Math.floor(Math.random() * 1250000);
-            role = roles[4];
+    function CommunityBubbles() {
+      const canvasRef = useRef(null);
+      const [hoveredBubble, setHoveredBubble] = useState(null);
+      const [connections, setConnections] = useState(true);
+      const [particles, setParticles] = useState(true);
+      const [currentBatch, setCurrentBatch] = useState(0);
+      const [memberImages, setMemberImages] = useState({});
+      const [searchQuery, setSearchQuery] = useState('');
+      const [searchResults, setSearchResults] = useState([]);
+      const [showResults, setShowResults] = useState(false);
+      const [highlighted, setHighlighted] = useState(new Set());
+      const [profile, setProfile] = useState(null);
+      const [roleFilter, setRoleFilter] = useState('all');
+      const [offsetX, setOffsetX] = useState(0);
+      const [offsetY, setOffsetY] = useState(0);
+      const [isDragging, setIsDragging] = useState(false);
+      const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+      
+      const BATCH_SIZE = 35, TOTAL = 6000, batches = Math.ceil(TOTAL / BATCH_SIZE);
+      const roles = [
+        { name: 'Peeps', color: '#a855f7', icon: '/assets/peeps.png' },
+        { name: 'Winged', color: '#10b981', icon: '/assets/winged.png' },
+        { name: 'Songbird', color: '#3b82f6', icon: '/assets/songbird.png' },
+        { name: 'Wayfinder', color: '#8b5cf6', icon: '/assets/wayfinder.png' },
+        { name: 'Skymaster', color: '#f59e0b', icon: '/assets/skymaster.png' },
+        { name: 'Nest-keeper', color: '#ec4899', icon: '/assets/nestkeeper.png' },
+        { name: 'Stork Team', color: '#ef4444', icon: '/assets/storkteam.png' }
+      ];
+      
+      const allMembers = useRef([]);
+      
+      useEffect(() => {
+        if (allMembers.current.length === 0) {
+          const pre = ['Shadow', 'Nova', 'Cyber', 'Lunar', 'Storm', 'Neon', 'Pixel', 'Cosmic'];
+          const suf = ['Wolf', 'Dragon', 'Phoenix', 'Tiger', 'Hawk', 'Viper', 'Fox', 'Lion'];
+          const num = ['', '77', '420', '69', '1337', '404'];
+          for (let i = 0; i < TOTAL; i++) {
+            let role, eggs;
+            const rand = Math.random();
+            
+            if (rand < 0.02) {
+              role = roles[6];
+              eggs = Math.floor(Math.random() * 2000000);
+            } else if (rand < 0.07) {
+              role = roles[5];
+              eggs = Math.floor(Math.random() * 2000000);
+            } else {
+              const eggRand = Math.random();
+              if (eggRand < 0.3) {
+                eggs = Math.floor(Math.random() * 15000);
+                role = roles[0];
+              } else if (eggRand < 0.55) {
+                eggs = 15000 + Math.floor(Math.random() * 60000);
+                role = roles[1];
+              } else if (eggRand < 0.75) {
+                eggs = 75000 + Math.floor(Math.random() * 175000);
+                role = roles[2];
+              } else if (eggRand < 0.9) {
+                eggs = 250000 + Math.floor(Math.random() * 500000);
+                role = roles[3];
+              } else {
+                eggs = 750000 + Math.floor(Math.random() * 1250000);
+                role = roles[4];
+              }
+            }
+            
+            allMembers.current.push({
+              id: i,
+              username: pre[i % pre.length] + suf[Math.floor(i / pre.length) % suf.length] + num[i % num.length],
+              avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + i,
+              online: Math.random() > 0.4,
+              joinedDaysAgo: Math.floor(Math.random() * 365),
+              messageCount: Math.floor(Math.random() * 50000),
+              eggs: eggs,
+              role: role,
+              xProfile: Math.random() > 0.5 ? '@user' + i : null
+            });
           }
         }
-        
-        allMembers.current.push({
-          id: i,
-          username: pre[i % pre.length] + suf[Math.floor(i / pre.length) % suf.length] + num[i % num.length],
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + i,
-          online: Math.random() > 0.4,
-          joinedDaysAgo: Math.floor(Math.random() * 365),
-          messageCount: Math.floor(Math.random() * 50000),
-          eggs: eggs,
-          role: role,
-          xProfile: Math.random() > 0.5 ? '@user' + i : null
-        });
-      }
-    }
-  }, []);
-  
-  useEffect(() => {
-    if (searchQuery.trim()) {
-      const results = allMembers.current.filter(m => m.username.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 10);
-      setSearchResults(results);
-      setShowResults(true);
-    } else {
-      setSearchResults([]);
-      setShowResults(false);
-      setHighlighted(new Set());
-    }
-  }, [searchQuery]);
-  
-  const jump = (id) => {
-    setCurrentBatch(Math.floor(id / BATCH_SIZE));
-    setHighlighted(new Set([id]));
-    setShowResults(false);
-    setOffsetX(0);
-    setOffsetY(0);
-  };
-  
-  const next = () => {
-    setCurrentBatch((p) => (p + 1) % batches);
-    setOffsetX(0);
-    setOffsetY(0);
-  };
-  const prev = () => {
-    setCurrentBatch((p) => (p - 1 + batches) % batches);
-    setOffsetX(0);
-    setOffsetY(0);
-  };
-  
-  useEffect(() => {
-    const key = (e) => {
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        prev();
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        next();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        setProfile(null);
-        setSearchQuery('');
-        setHighlighted(new Set());
-      } else if (e.key === 'r' || e.key === 'R') {
-        e.preventDefault();
+      }, []);
+      
+      useEffect(() => {
+        if (searchQuery.trim()) {
+          const results = allMembers.current.filter(m => m.username.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 10);
+          setSearchResults(results);
+          setShowResults(true);
+        } else {
+          setSearchResults([]);
+          setShowResults(false);
+          setHighlighted(new Set());
+        }
+      }, [searchQuery]);
+      
+      const jump = (id) => {
+        setCurrentBatch(Math.floor(id / BATCH_SIZE));
+        setHighlighted(new Set([id]));
+        setShowResults(false);
         setOffsetX(0);
         setOffsetY(0);
-      }
-    };
-    window.addEventListener('keydown', key);
-    return () => window.removeEventListener('keydown', key);
-  }, [currentBatch]);
-  
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    
-    const resize = () => { 
-      canvas.width = window.innerWidth; 
-      canvas.height = window.innerHeight; 
-    };
-    resize();
-    window.addEventListener('resize', resize);
-    
-    const schemes = [['#1e3a8a', '#0ea5e9'], ['#0f766e', '#14b8a6'], ['#0c4a6e', '#06b6d4'], ['#134e4a', '#2dd4bf']];
-    const stars = Array.from({ length: 150 }, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 1.5, o: Math.random(), s: 0.01 + Math.random() * 0.02 }));
-    const trails = [];
-    let ripples = [];
-    
-    const overlap = (x1, y1, r1, x2, y2, r2) => Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) < (r1 + r2 + 10);
-    
-    const inUIZone = (x, y, r) => {
-      const zones = [
-        { x: 0, y: 0, w: 380, h: 320 },
-        { x: canvas.width - 280, y: 0, w: 280, h: 580 },
-        { x: 0, y: canvas.height / 2 - 220, w: 140, h: 440 },
-        { x: 0, y: canvas.height - 280, w: 280, h: 280 },
-        { x: canvas.width - 320, y: canvas.height - 120, w: 320, h: 120 }
-      ];
-      return zones.some(z => x - r - 30 < z.x + z.w && x + r + 30 > z.x && y - r - 30 < z.y + z.h && y + r + 30 > z.y);
-    };
-    
-    const loadImg = (url, id) => {
-      if (memberImages[id]) return memberImages[id];
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = url;
-      img.onload = () => setMemberImages(p => ({ ...p, [id]: img }));
-      return null;
-    };
-    
-    // Preload role icons
-    roles.forEach(r => {
-      const img = new Image();
-      img.src = r.icon;
-    });
-    
-    const genBubbles = (batch) => {
-      const bubbles = [];
-      const start = batch * BATCH_SIZE, end = Math.min(start + BATCH_SIZE, TOTAL);
-      for (let i = 0; i < end - start; i++) {
-        const m = allMembers.current[start + i];
+      };
+      
+      const next = () => {
+        setCurrentBatch((p) => (p + 1) % batches);
+        setOffsetX(0);
+        setOffsetY(0);
+      };
+      const prev = () => {
+        setCurrentBatch((p) => (p - 1 + batches) % batches);
+        setOffsetX(0);
+        setOffsetY(0);
+      };
+      
+      useEffect(() => {
+        const key = (e) => {
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            prev();
+          } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            next();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setProfile(null);
+            setSearchQuery('');
+            setHighlighted(new Set());
+          } else if (e.key === 'r' || e.key === 'R') {
+            e.preventDefault();
+            setOffsetX(0);
+            setOffsetY(0);
+          }
+        };
+        window.addEventListener('keydown', key);
+        return () => window.removeEventListener('keydown', key);
+      }, [currentBatch]);
+      
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
         
-        if (roleFilter !== 'all' && m.role.name !== roleFilter) {
-          continue;
-        }
+        const resize = () => { 
+          canvas.width = window.innerWidth; 
+          canvas.height = window.innerHeight; 
+        };
+        resize();
+        window.addEventListener('resize', resize);
         
-        const r = 25 + Math.random() * 20;
-        let x, y, placed = false, tries = 0;
-        while (!placed && tries < 300) {
-          x = 150 + Math.random() * (canvas.width - 300);
-          y = 150 + Math.random() * (canvas.height - 300);
-          if (!bubbles.some(b => overlap(x, y, r, b.x, b.y, b.r)) && !inUIZone(x, y, r)) placed = true;
-          tries++;
-        }
-        if (!placed) continue;
-        loadImg(m.avatar, m.id);
-        bubbles.push({ x, y, ox: x, oy: y, r, br: r, vx: 0, vy: 0, c: schemes[(start + i) % schemes.length], gi: 0, gt: 0, ps: 0.02 + Math.random() * 0.03, po: Math.random() * Math.PI * 2, ngt: Date.now() + Math.random() * 3000, m, lt: 0, t: true, s: 0 });
-      }
-      return bubbles;
-    };
-    
-    let bubbles = genBubbles(currentBatch);
-    let mx = -1000, my = -1000;
-    
-    const move = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      mx = e.clientX - rect.left;
-      my = e.clientY - rect.top;
-      
-      if (isDragging) {
-        const dx = mx - dragStart.x;
-        const dy = my - dragStart.y;
-        setOffsetX(prev => prev + dx);
-        setOffsetY(prev => prev + dy);
-        setDragStart({ x: mx, y: my });
-        return;
-      }
-      
-      const h = bubbles.find(b => Math.sqrt((mx - b.x - offsetX) ** 2 + (my - b.y - offsetY) ** 2) < b.r);
-      setHoveredBubble(h ? h.m : null);
-    };
-    
-    const mouseDown = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const cx = e.clientX - rect.left;
-      const cy = e.clientY - rect.top;
-      setIsDragging(true);
-      setDragStart({ x: cx, y: cy });
-    };
-    
-    const mouseUp = () => {
-      setIsDragging(false);
-    };
-    
-    const click = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
-      let clickedBubble = null;
-      bubbles.forEach(b => {
-        if (Math.sqrt((cx - b.x) ** 2 + (cy - b.y) ** 2) < b.r) {
-          clickedBubble = b;
-        }
-      });
-      if (clickedBubble) {
-        ripples.push({ x: clickedBubble.x, y: clickedBubble.y, r: clickedBubble.r, mr: clickedBubble.r * 4, o: 1, c: clickedBubble.c[0] });
-        setProfile(clickedBubble.m);
-        e.stopPropagation();
-      }
-    };
-    
-    canvas.addEventListener('mousemove', move);
-    canvas.addEventListener('mousedown', mouseDown);
-    canvas.addEventListener('mouseup', mouseUp);
-    canvas.addEventListener('click', click, true);
-    
-    // Touch events for mobile
-    canvas.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const rect = canvas.getBoundingClientRect();
-      const cx = touch.clientX - rect.left;
-      const cy = touch.clientY - rect.top;
-      setIsDragging(true);
-      setDragStart({ x: cx, y: cy });
-      click({ clientX: touch.clientX, clientY: touch.clientY });
-    });
-    canvas.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const rect = canvas.getBoundingClientRect();
-      mx = touch.clientX - rect.left;
-      my = touch.clientY - rect.top;
-      if (isDragging) {
-        const dx = mx - dragStart.x;
-        const dy = my - dragStart.y;
-        setOffsetX(prev => prev + dx);
-        setOffsetY(prev => prev + dy);
-        setDragStart({ x: mx, y: my });
-      }
-    });
-    canvas.addEventListener('touchend', () => {
-      setIsDragging(false);
-    });
-    
-    let aid;
-    const anim = () => {
-      ctx.fillStyle = '#0a1628';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      stars.forEach(s => {
-        s.o = Math.max(0.1, Math.min(1, s.o + Math.sin(Date.now() * s.s) * 0.02));
-        ctx.fillStyle = 'rgba(255,255,255,' + (s.o * 0.6) + ')';
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fill();
-      });
-      
-      const t = Date.now();
-      
-      if (connections) {
-        bubbles.forEach((b1, i) => {
-          bubbles.slice(i + 1).forEach(b2 => {
-            const d = Math.sqrt((b2.x - b1.x) ** 2 + (b2.y - b1.y) ** 2);
-            if (d < 180) {
-              ctx.strokeStyle = 'rgba(20,184,166,' + ((1 - d / 180) * 0.2 * b1.s * b2.s) + ')';
-              ctx.lineWidth = 1;
-              ctx.beginPath();
-              ctx.moveTo(b1.x + offsetX, b1.y + offsetY);
-              ctx.lineTo(b2.x + offsetX, b2.y + offsetY);
-              ctx.stroke();
+        const schemes = [['#1e3a8a', '#0ea5e9'], ['#0f766e', '#14b8a6'], ['#0c4a6e', '#06b6d4'], ['#134e4a', '#2dd4bf']];
+        const stars = Array.from({ length: 150 }, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 1.5, o: Math.random(), s: 0.01 + Math.random() * 0.02 }));
+        const trails = [];
+        let ripples = [];
+        
+        const overlap = (x1, y1, r1, x2, y2, r2) => Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) < (r1 + r2 + 10);
+        
+        const inUIZone = (x, y, r) => {
+          const zones = [
+            { x: 0, y: 0, w: 380, h: 320 },
+            { x: canvas.width - 280, y: 0, w: 280, h: 580 },
+            { x: 0, y: canvas.height / 2 - 220, w: 140, h: 440 },
+            { x: 0, y: canvas.height - 280, w: 280, h: 280 },
+            { x: canvas.width - 320, y: canvas.height - 120, w: 320, h: 120 }
+          ];
+          return zones.some(z => x - r - 30 < z.x + z.w && x + r + 30 > z.x && y - r - 30 < z.y + z.h && y + r + 30 > z.y);
+        };
+        
+        const loadImg = (url, id) => {
+          if (memberImages[id]) return memberImages[id];
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.src = url;
+          img.onload = () => setMemberImages(p => ({ ...p, [id]: img }));
+          return null;
+        };
+        
+        // Preload role icons
+        roles.forEach(r => {
+          const img = new Image();
+          img.src = r.icon;
+        });
+        
+        const genBubbles = (batch) => {
+          const bubbles = [];
+          const start = batch * BATCH_SIZE, end = Math.min(start + BATCH_SIZE, TOTAL);
+          for (let i = 0; i < end - start; i++) {
+            const m = allMembers.current[start + i];
+            
+            if (roleFilter !== 'all' && m.role.name !== roleFilter) {
+              continue;
+            }
+            
+            const r = 25 + Math.random() * 20;
+            let x, y, placed = false, tries = 0;
+            while (!placed && tries < 300) {
+              x = 150 + Math.random() * (canvas.width - 300);
+              y = 150 + Math.random() * (canvas.height - 300);
+              if (!bubbles.some(b => overlap(x, y, r, b.x, b.y, b.r)) && !inUIZone(x, y, r)) placed = true;
+              tries++;
+            }
+            if (!placed) continue;
+            loadImg(m.avatar, m.id);
+            bubbles.push({ x, y, ox: x, oy: y, r, br: r, vx: 0, vy: 0, c: schemes[(start + i) % schemes.length], gi: 0, gt: 0, ps: 0.02 + Math.random() * 0.03, po: Math.random() * Math.PI * 2, ngt: Date.now() + Math.random() * 3000, m, lt: 0, t: true, s: 0 });
+          }
+          return bubbles;
+        };
+        
+        let bubbles = genBubbles(currentBatch);
+        let mx = -1000, my = -1000;
+        
+        const move = (e) => {
+          const rect = canvas.getBoundingClientRect();
+          mx = e.clientX - rect.left;
+          my = e.clientY - rect.top;
+          
+          if (isDragging) {
+            const dx = mx - dragStart.x;
+            const dy = my - dragStart.y;
+            setOffsetX(prev => prev + dx);
+            setOffsetY(prev => prev + dy);
+            setDragStart({ x: mx, y: my });
+            return;
+          }
+          
+          const h = bubbles.find(b => Math.sqrt((mx - b.x - offsetX) ** 2 + (my - b.y - offsetY) ** 2) < b.r);
+          setHoveredBubble(h ? h.m : null);
+        };
+        
+        const mouseDown = (e) => {
+          const rect = canvas.getBoundingClientRect();
+          const cx = e.clientX - rect.left;
+          const cy = e.clientY - rect.top;
+          setIsDragging(true);
+          setDragStart({ x: cx, y: cy });
+        };
+        
+        const mouseUp = () => {
+          setIsDragging(false);
+        };
+        
+        const click = (e) => {
+          const rect = canvas.getBoundingClientRect();
+          const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+          let clickedBubble = null;
+          bubbles.forEach(b => {
+            if (Math.sqrt((cx - b.x) ** 2 + (cy - b.y) ** 2) < b.r) {
+              clickedBubble = b;
             }
           });
+          if (clickedBubble) {
+            ripples.push({ x: clickedBubble.x, y: clickedBubble.y, r: clickedBubble.r, mr: clickedBubble.r * 4, o: 1, c: clickedBubble.c[0] });
+            setProfile(clickedBubble.m);
+            e.stopPropagation();
+          }
+        };
+        
+        canvas.addEventListener('mousemove', move);
+        canvas.addEventListener('mousedown', mouseDown);
+        canvas.addEventListener('mouseup', mouseUp);
+        canvas.addEventListener('click', click, true);
+        
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const rect = canvas.getBoundingClientRect();
+          const cx = touch.clientX - rect.left;
+          const cy = touch.clientY - rect.top;
+          setIsDragging(true);
+          setDragStart({ x: cx, y: cy });
+          click({ clientX: touch.clientX, clientY: touch.clientY });
         });
-      }
-      
-      if (particles) {
-        trails.forEach((p, i) => {
-          p.l -= 0.02;
-          p.r *= 0.96;
-          if (p.l <= 0) { trails.splice(i, 1); return; }
-          ctx.fillStyle = 'rgba(20,184,166,' + (p.l * 0.5) + ')';
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          ctx.fill();
-        });
-      }
-      
-      bubbles.forEach((b, i) => {
-        if (b.t) { b.s += 0.05; if (b.s >= 1) { b.s = 1; b.t = false; } }
-        
-        b.x = b.ox + offsetX;
-        b.y = b.oy + offsetY;
-        
-        let nx = b.ox, ny = b.oy; // No velocity change
-        
-        bubbles.forEach((o, j) => {
-          if (i !== j) {
-            const dx = o.ox - b.ox, dy = o.oy - b.oy, d = Math.sqrt(dx * dx + dy * dy);
-            if (d < b.r + o.r + 15) {
-              const a = Math.atan2(dy, dx), ov = (b.r + o.r + 15) - d;
-              nx -= Math.cos(a) * ov * 0.5;
-              ny -= Math.sin(a) * ov * 0.5;
-            }
+        canvas.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const rect = canvas.getBoundingClientRect();
+          mx = touch.clientX - rect.left;
+          my = touch.clientY - rect.top;
+          if (isDragging) {
+            const dx = mx - dragStart.x;
+            const dy = my - dragStart.y;
+            setOffsetX(prev => prev + dx);
+            setOffsetY(prev => prev + dy);
+            setDragStart({ x: mx, y: my });
           }
         });
+        canvas.addEventListener('touchend', () => {
+          setIsDragging(false);
+        });
         
-        if (inUIZone(nx + offsetX, ny + offsetY, b.r)) {
-          // No bounce
-        } else {
-          b.ox = nx;
-          b.oy = ny;
-        }
-        
-        if (b.ox < b.r + 20) { b.ox = b.r + 20; }
-        if (b.ox > canvas.width - b.r - 20) { b.ox = canvas.width - b.r - 20; }
-        if (b.oy < b.r + 20) { b.oy = b.r + 20; }
-        if (b.oy > canvas.height - b.r - 20) { b.oy = canvas.height - b.r - 20; }
-        
-        if (particles && t - b.lt > 100 && b.s === 1) {
-          trails.push({ x: b.x, y: b.y, r: b.r * 0.3, l: 1 });
-          b.lt = t;
-        }
-        
-        b.r = b.br + Math.sin(t * b.ps + b.po) * 2;
-        if (t > b.ngt) { b.gt = Math.random() > 0.6 ? 1 : 0; b.ngt = t + 1000 + Math.random() * 4000; }
-        b.gi += (b.gt - b.gi) * 0.05;
-        
-        const d = Math.sqrt((mx - b.x) ** 2 + (my - b.y) ** 2);
-        const hov = d < b.r, hl = highlighted.has(b.m.id);
-        const dr = Math.max(b.r * b.s, 5), gs = dr + 20 + b.gi * 40;
-        const g = ctx.createRadialGradient(b.x, b.y, dr * 0.5, b.x, b.y, gs);
-        
-        if (hl) {
-          g.addColorStop(0, '#fbbf24FF');
-          g.addColorStop(0.4, '#f59e0bDD');
-          g.addColorStop(0.7, '#f59e0b66');
-          g.addColorStop(1, '#f59e0b00');
-        } else if (hov) {
-          g.addColorStop(0, b.c[0] + 'FF');
-          g.addColorStop(0.4, b.c[1] + 'DD');
-          g.addColorStop(0.7, b.c[1] + '66');
-          g.addColorStop(1, b.c[1] + '00');
-        } else {
-          const al = Math.floor(b.gi * 200).toString(16).padStart(2, '0');
-          g.addColorStop(0, b.c[1] + al);
-          g.addColorStop(0.5, b.c[1] + Math.floor(b.gi * 100).toString(16).padStart(2, '0'));
-          g.addColorStop(1, b.c[1] + '00');
-        }
-        
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, gs, 0, Math.PI * 2);
-        ctx.fill();
-        
-        const mg = ctx.createRadialGradient(b.x - dr * 0.3, b.y - dr * 0.3, 0, b.x, b.y, dr);
-        mg.addColorStop(0, b.c[1]);
-        mg.addColorStop(1, b.c[0]);
-        ctx.fillStyle = mg;
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, dr, 0, Math.PI * 2);
-        ctx.fill();
-        
-        const img = memberImages[b.m.id];
-        const imgRadius = Math.max(dr - 4, 1);
-        if (img && img.complete) {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(b.x, b.y, imgRadius, 0, Math.PI * 2);
-          ctx.clip();
-          ctx.drawImage(img, b.x - imgRadius, b.y - imgRadius, imgRadius * 2, imgRadius * 2);
-          ctx.restore();
-        } else {
-          ctx.fillStyle = 'rgba(255,255,255,0.2)';
-          ctx.font = Math.max(dr * 0.6, 8) + 'px Arial';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText('👤', b.x, b.y);
-        }
-        
-        // Enhanced role color strip - wider and more visible diagonal accent
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, Math.max(dr + 1, 2), 0, Math.PI * 2);
-        ctx.clip();
-        
-        const stripGrad = ctx.createLinearGradient(
-          b.x - dr * 0.7, b.y - dr * 0.7,
-          b.x + dr * 0.7, b.y + dr * 0.7
-        );
-        stripGrad.addColorStop(0, b.m.role.color + '00');
-        stripGrad.addColorStop(0.4, b.m.role.color + 'FF');
-        stripGrad.addColorStop(0.6, b.m.role.color + 'FF');
-        stripGrad.addColorStop(1, b.m.role.color + '00');
-        
-        ctx.fillStyle = stripGrad;
-        ctx.rotate(Math.PI / 4); // Rotate for diagonal
-        ctx.fillRect(b.x - dr * 1.5, b.y - dr * 0.2, dr * 3, dr * 0.4); // Wider strip
-        ctx.restore();
-        
-        ctx.strokeStyle = b.m.role.color;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, Math.max(dr + 1, 2), 0, Math.PI * 2);
-        ctx.stroke();
-        
-        ctx.strokeStyle = hov || hl ? '#fbbf24' : '#B2E0DC';
-        ctx.lineWidth = hov || hl ? 2 : 1.5;
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, Math.max(dr + 1, 2), 0, Math.PI * 2);
-        ctx.stroke();
-        
-        if (b.m.online) {
-          ctx.fillStyle = '#ef4444';
-          ctx.shadowColor = '#ef4444';
-          ctx.shadowBlur = 5;
-          ctx.beginPath();
-          ctx.arc(b.x + dr * 0.6, b.y - dr * 0.6, 6, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-        }
-      });
-      
-      ripples.forEach((r, i) => {
-        r.r += 3;
-        r.o -= 0.02;
-        if (r.o <= 0) { ripples.splice(i, 1); return; }
-        ctx.strokeStyle = r.c + Math.floor(r.o * 255).toString(16).padStart(2, '0');
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
-        ctx.stroke();
-      });
-      
-      aid = requestAnimationFrame(anim);
-    };
-    
-    anim();
-    return () => {
-      window.removeEventListener('resize', resize);
-      canvas.removeEventListener('mousemove', move);
-      canvas.removeEventListener('mousedown', mouseDown);
-      canvas.removeEventListener('mouseup', mouseUp);
-      canvas.removeEventListener('click', click);
-      cancelAnimationFrame(aid);
-    };
-  }, [connections, particles, currentBatch, memberImages, highlighted, roleFilter, offsetX, offsetY, isDragging, dragStart]);
-  
-  return (
-    <div className="relative w-full h-screen bg-gray-900 overflow-hidden">
-      <canvas ref={canvasRef} className="absolute inset-0 cursor-pointer" />
-      
-      {/* Search Bar - Top Left */}
-      <div className="absolute top-2 left-2 sm:top-4 sm:left-4 w-64 sm:w-72 md:w-80 z-10">
-        <div className="bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl border border-teal-500/30 shadow-xl">
-          <div className="flex items-center gap-2">
-            <svg className="w-3 h-3 sm:w-4 sm:h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            <input type="text" placeholder="Search members..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 bg-transparent outline-none text-xs sm:text-sm" />
-            {searchQuery && <button onClick={() => setSearchQuery('')} className="text-teal-400"><svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>}
-          </div>
-        </div>
-        {showResults && searchResults.length > 0 && (
-          <div className="mt-2 bg-slate-900/95 backdrop-blur-sm rounded-xl border border-teal-500/30 shadow-xl max-h-48 sm:max-h-64 overflow-y-auto">
-            {searchResults.map(m => (
-              <button key={m.id} onClick={() => jump(m.id)} className="w-full px-3 py-2 text-left hover:bg-teal-900/50 flex items-center gap-2 border-b border-teal-500/10 last:border-0">
-                <img src={roles.find(r => r.name === m.role.name)?.icon} alt="" className="w-5 h-5" />
-                <div className="flex-1"><p className="text-xs sm:text-sm font-semibold text-white">{m.username}</p><p className="text-xs text-teal-300">{m.role.name}</p></div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-      
-      {hoveredBubble && !profile && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-teal-900/90 backdrop-blur-sm text-white px-5 py-4 rounded-xl border border-teal-500/30 shadow-xl z-20 max-w-xs pointer-events-none">
-          <div className="flex items-center gap-3"><img src={hoveredBubble.role.icon} alt="" className="w-8 h-8" /><div><p className="text-base font-bold">{hoveredBubble.username}</p><p className="text-xs text-teal-300">{hoveredBubble.role.name}</p></div></div>
-          <div className="mt-3 space-y-1 text-xs">
-            <p className="flex items-center gap-2"><span className={'w-2 h-2 rounded-full ' + (hoveredBubble.online ? 'bg-red-500' : 'bg-gray-400')}></span>{hoveredBubble.online ? 'Online' : 'Offline'}</p>
-            <p className="text-teal-300">💬 {hoveredBubble.messageCount.toLocaleString()}</p>
-            <p className="text-teal-300">📅 {hoveredBubble.joinedDaysAgo}d ago</p>
-          </div>
-          <p className="text-xs opacity-75 mt-2 pt-2 border-t border-teal-500/30">Click for profile</p>
-        </div>
-      )}
-      
-      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 space-y-2 sm:space-y-3">
-        <div className="bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-5 sm:py-4 rounded-xl border border-teal-500/30 shadow-xl">
-          <p className="text-xs font-bold text-teal-400 mb-1 sm:mb-2">FILTER BY ROLE</p>
-          <select 
-            value={roleFilter} 
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-teal-500/30 outline-none cursor-pointer"
-          >
-            <option value="all">All Roles</option>
-            {roles.map(r => <option key={r.name} value={r.name}><img src={r.icon} alt="" className="inline w-4 h-4 mr-1" /> {r.name}</option>)}
-          </select>
-        </div>
-        
-        <div className="bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-5 sm:py-4 rounded-xl border border-teal-500/30 shadow-xl">
-          <p className="text-xs font-bold text-teal-400 mb-1 sm:mb-2">STATS</p>
-          <p className="text-xs text-teal-300">Current Batch: <span className="font-bold">{
-            (() => {
-              const start = currentBatch * BATCH_SIZE;
-              const end = Math.min(start + BATCH_SIZE, TOTAL);
-              let count = 0;
-              for (let i = start; i < end; i++) {
-                const m = allMembers.current[i];
-                if (roleFilter === 'all' || m.role.name === roleFilter) {
-                  count++;
+        let aid;
+        const anim = () => {
+          ctx.fillStyle = '#0a1628';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          stars.forEach(s => {
+            s.o = Math.max(0.1, Math.min(1, s.o + Math.sin(Date.now() * s.s) * 0.02));
+            ctx.fillStyle = 'rgba(255,255,255,' + (s.o * 0.6) + ')';
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fill();
+          });
+          
+          const t = Date.now();
+          
+          if (connections) {
+            bubbles.forEach((b1, i) => {
+              bubbles.slice(i + 1).forEach(b2 => {
+                const d = Math.sqrt((b2.x - b1.x) ** 2 + (b2.y - b1.y) ** 2);
+                if (d < 180) {
+                  ctx.strokeStyle = 'rgba(20,184,166,' + ((1 - d / 180) * 0.2 * b1.s * b2.s) + ')';
+                  ctx.lineWidth = 1;
+                  ctx.beginPath();
+                  ctx.moveTo(b1.x + offsetX, b1.y + offsetY);
+                  ctx.lineTo(b2.x + offsetX, b2.y + offsetY);
+                  ctx.stroke();
+                }
+              });
+            });
+          }
+          
+          if (particles) {
+            trails.forEach((p, i) => {
+              p.l -= 0.02;
+              p.r *= 0.96;
+              if (p.l <= 0) { trails.splice(i, 1); return; }
+              ctx.fillStyle = 'rgba(20,184,166,' + (p.l * 0.5) + ')';
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+              ctx.fill();
+            });
+          }
+          
+          bubbles.forEach((b, i) => {
+            if (b.t) { b.s += 0.05; if (b.s >= 1) { b.s = 1; b.t = false; } }
+            
+            b.x = b.ox + offsetX;
+            b.y = b.oy + offsetY;
+            
+            let nx = b.ox, ny = b.oy; // No velocity change
+            
+            bubbles.forEach((o, j) => {
+              if (i !== j) {
+                const dx = o.ox - b.ox, dy = o.oy - b.oy, d = Math.sqrt(dx * dx + dy * dy);
+                if (d < b.r + o.r + 15) {
+                  const a = Math.atan2(dy, dx), ov = (b.r + o.r + 15) - d;
+                  nx -= Math.cos(a) * ov * 0.5;
+                  ny -= Math.sin(a) * ov * 0.5;
                 }
               }
-              return count;
-            })()
-          }</span></p>
-          <p className="text-xs text-teal-300">Total: <span className="font-bold">{
-            roleFilter === 'all' 
-              ? TOTAL 
-              : allMembers.current.filter(m => m.role.name === roleFilter).length
-          }</span></p>
-        </div>
-        
-        <div className="bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-5 sm:py-4 rounded-xl border border-teal-500/30 shadow-xl">
-          <p className="text-xs font-bold text-teal-400 mb-2 sm:mb-3">ROLE LEGEND</p>
-          {roles.map(r => <div key={r.name} className="flex items-center gap-2 mb-1.5"><img src={r.icon} alt="" className="w-5 h-5" /><div className="w-8 sm:w-10 h-1.5 sm:h-2 rounded" style={{backgroundColor: r.color}}></div><span className="text-xs">{r.name}</span></div>)}
+            });
+            
+            if (inUIZone(nx + offsetX, ny + offsetY, b.r)) {
+              // No bounce
+            } else {
+              b.ox = nx;
+              b.oy = ny;
+            }
+            
+            if (b.ox < b.r + 20) { b.ox = b.r + 20; }
+            if (b.ox > canvas.width - b.r - 20) { b.ox = canvas.width - b.r - 20; }
+            if (b.oy < b.r + 20) { b.oy = b.r + 20; }
+            if (b.oy > canvas.height - b.r - 20) { b.oy = canvas.height - b.r - 20; }
+            
+            if (particles && t - b.lt > 100 && b.s === 1) {
+              trails.push({ x: b.x, y: b.y, r: b.r * 0.3, l: 1 });
+              b.lt = t;
+            }
+            
+            b.r = b.br + Math.sin(t * b.ps + b.po) * 2;
+            if (t > b.ngt) { b.gt = Math.random() > 0.6 ? 1 : 0; b.ngt = t + 1000 + Math.random() * 4000; }
+            b.gi += (b.gt - b.gi) * 0.05;
+            
+            const d = Math.sqrt((mx - b.x) ** 2 + (my - b.y) ** 2);
+            const hov = d < b.r, hl = highlighted.has(b.m.id);
+            const dr = Math.max(b.r * b.s, 5), gs = dr + 20 + b.gi * 40;
+            const g = ctx.createRadialGradient(b.x, b.y, dr * 0.5, b.x, b.y, gs);
+            
+            if (hl) {
+              g.addColorStop(0, '#fbbf24FF');
+              g.addColorStop(0.4, '#f59e0bDD');
+              g.addColorStop(0.7, '#f59e0b66');
+              g.addColorStop(1, '#f59e0b00');
+            } else if (hov) {
+              g.addColorStop(0, b.c[0] + 'FF');
+              g.addColorStop(0.4, b.c[1] + 'DD');
+              g.addColorStop(0.7, b.c[1] + '66');
+              g.addColorStop(1, b.c[1] + '00');
+            } else {
+              const al = Math.floor(b.gi * 200).toString(16).padStart(2, '0');
+              g.addColorStop(0, b.c[1] + al);
+              g.addColorStop(0.5, b.c[1] + Math.floor(b.gi * 100).toString(16).padStart(2, '0'));
+              g.addColorStop(1, b.c[1] + '00');
+            }
+            
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, gs, 0, Math.PI * 2);
+            ctx.fill();
+            
+            const mg = ctx.createRadialGradient(b.x - dr * 0.3, b.y - dr * 0.3, 0, b.x, b.y, dr);
+            mg.addColorStop(0, b.c[1]);
+            mg.addColorStop(1, b.c[0]);
+            ctx.fillStyle = mg;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, dr, 0, Math.PI * 2);
+            ctx.fill();
+            
+            const img = memberImages[b.m.id];
+            const imgRadius = Math.max(dr - 4, 1);
+            if (img && img.complete) {
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(b.x, b.y, imgRadius, 0, Math.PI * 2);
+              ctx.clip();
+              ctx.drawImage(img, b.x - imgRadius, b.y - imgRadius, imgRadius * 2, imgRadius * 2);
+              ctx.restore();
+            } else {
+              ctx.fillStyle = 'rgba(255,255,255,0.2)';
+              ctx.font = Math.max(dr * 0.6, 8) + 'px Arial';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText('👤', b.x, b.y);
+            }
+            
+            // Enhanced role color strip - wider and more visible diagonal accent
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, Math.max(dr + 1, 2), 0, Math.PI * 2);
+            ctx.clip();
+            
+            const stripGrad = ctx.createLinearGradient(
+              b.x - dr * 0.7, b.y - dr * 0.7,
+              b.x + dr * 0.7, b.y + dr * 0.7
+            );
+            stripGrad.addColorStop(0, b.m.role.color + '00');
+            stripGrad.addColorStop(0.4, b.m.role.color + 'FF');
+            stripGrad.addColorStop(0.6, b.m.role.color + 'FF');
+            stripGrad.addColorStop(1, b.m.role.color + '00');
+            
+            ctx.fillStyle = stripGrad;
+            ctx.rotate(Math.PI / 4); // Rotate for diagonal
+            ctx.fillRect(b.x - dr * 1.5, b.y - dr * 0.2, dr * 3, dr * 0.4); // Wider strip
+            ctx.restore();
+            
+            ctx.strokeStyle = b.m.role.color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, Math.max(dr + 1, 2), 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.strokeStyle = hov || hl ? '#fbbf24' : '#B2E0DC';
+            ctx.lineWidth = hov || hl ? 2 : 1.5;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, Math.max(dr + 1, 2), 0, Math.PI * 2);
+            ctx.stroke();
+            
+            if (b.m.online) {
+              ctx.fillStyle = '#ef4444';
+              ctx.shadowColor = '#ef4444';
+              ctx.shadowBlur = 5;
+              ctx.beginPath();
+              ctx.arc(b.x + dr * 0.6, b.y - dr * 0.6, 6, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.shadowBlur = 0;
+            }
+          });
           
-          <div className="mt-4 pt-3 border-t border-teal-500/30">
-            <p className="text-xs font-bold text-teal-400 mb-2">DISTRIBUTION</p>
-            <svg viewBox="0 0 100 100" className="w-20 h-20 mx-auto"> {/* Reduced size to avoid overlap */}
-              {(() => {
-                const visibleMembers = roleFilter === 'all' 
-                  ? allMembers.current 
-                  : allMembers.current.filter(m => m.role.name === roleFilter);
-                
-                const roleCounts = roles.map(r => ({
-                  ...r,
-                  count: visibleMembers.filter(m => m.role.name === r.name).length
-                }));
-                
-                const total = visibleMembers.length || 1;
-                let currentAngle = -90;
-                
-                return roleCounts.filter(r => r.count > 0).map((r, i) => {
-                  const percentage = (r.count / total) * 100;
-                  const angle = (percentage / 100) * 360;
-                  const startAngle = currentAngle * Math.PI / 180;
-                  const endAngle = (currentAngle + angle) * Math.PI / 180;
-                  
-                  const x1 = 50 + 35 * Math.cos(startAngle);
-                  const y1 = 50 + 35 * Math.sin(startAngle);
-                  const x2 = 50 + 35 * Math.cos(endAngle);
-                  const y2 = 50 + 35 * Math.sin(endAngle);
-                  
-                  const largeArc = angle > 180 ? 1 : 0;
-                  const path = `M 50 50 L ${x1} ${y1} A 35 35 0 ${largeArc} 1 ${x2} ${y2} Z`;
-                  
-                  currentAngle += angle;
-                  
-                  return (
-                    <g key={r.name}>
-                      <path d={path} fill={r.color} opacity="0.8" />
-                      <title>{r.name}: {percentage.toFixed(1)}%</title>
-                    </g>
-                  );
-                });
-              })()}
-              <circle cx="50" cy="50" r="20" fill="#0a1628" />
-            </svg>
-          </div>
-        </div>
-      </div>
+          ripples.forEach((r, i) => {
+            r.r += 3;
+            r.o -= 0.02;
+            if (r.o <= 0) { ripples.splice(i, 1); return; }
+            ctx.strokeStyle = r.c + Math.floor(r.o * 255).toString(16).padStart(2, '0');
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+            ctx.stroke();
+          });
+          
+          aid = requestAnimationFrame(anim);
+        };
+        
+        anim();
+        return () => {
+          window.removeEventListener('resize', resize);
+          canvas.removeEventListener('mousemove', move);
+          canvas.removeEventListener('mousedown', mouseDown);
+          canvas.removeEventListener('mouseup', mouseUp);
+          canvas.removeEventListener('click', click);
+          cancelAnimationFrame(aid);
+        };
+      }, [connections, particles, currentBatch, memberImages, highlighted, roleFilter, offsetX, offsetY, isDragging, dragStart]);
       
-      <div className="absolute top-1/2 left-2 sm:left-4 -translate-y-1/2 flex flex-col gap-2 sm:gap-3 z-10">
-        <button onClick={prev} className="bg-slate-900/90 backdrop-blur-sm text-white p-2 sm:p-3 rounded-full border-2 border-teal-500/40 hover:bg-teal-900/90 shadow-lg"><svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg></button>
-        <div className="bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl border-2 border-teal-500/40 text-center shadow-lg"><p className="text-xs text-teal-300 font-semibold">BATCH</p><p className="text-base sm:text-lg font-bold">{currentBatch + 1}<span className="text-xs sm:text-sm text-teal-400">/{batches}</span></p></div>
-        <button onClick={next} className="bg-slate-900/90 backdrop-blur-sm text-white p-2 sm:p-3 rounded-full border-2 border-teal-500/40 hover:bg-teal-900/90 shadow-lg"><svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></button>
-      </div>
-      
-      <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-5 sm:py-4 rounded-xl border border-teal-500/30 shadow-xl space-y-2 sm:space-y-3 z-10">
-        <p className="text-xs font-bold text-teal-400 mb-1 sm:mb-2">CONTROLS</p>
-        <label className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm cursor-pointer"><input type="checkbox" checked={connections} onChange={(e) => setConnections(e.target.checked)} className="w-3 h-3 sm:w-4 sm:h-4" />Lines</label>
-        <label className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm cursor-pointer"><input type="checkbox" checked={particles} onChange={(e) => setParticles(e.target.checked)} className="w-3 h-3 sm:w-4 sm:h-4" />Particles</label>
-        <button onClick={() => { setOffsetX(0); setOffsetY(0); }} className="w-full bg-teal-600 hover:bg-teal-700 text-white py-1.5 px-3 sm:py-2 sm:px-4 rounded-lg text-xs sm:text-sm font-semibold">Reset View</button>
-      </div>
-      
-      <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-5 sm:py-3 rounded-xl border border-teal-500/30 shadow-xl z-10">
-        <p className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
-          <img src="/assets/stork-logo.png" alt="Stork" className="w-5 h-5" onError={(e) => e.target.style.display = 'none'} />
-          <span className="font-semibold">Stork Community Galaxy</span>
-        </p>
-        <p className="text-xs text-teal-300 mt-0.5 sm:mt-1">← → arrows • Drag to pan • R to reset</p>
-      </div>
-      
-      {profile && (
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setProfile(null)}>
-          <div className="bg-slate-900/95 backdrop-blur-sm text-white p-6 rounded-2xl border-2 border-teal-500/50 shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center gap-3">
-                <img src={profile.role.icon} alt="" className="w-10 h-10" />
-                <div>
-                  <h2 className="text-2xl font-bold">{profile.username}</h2>
-                  <p className="text-sm" style={{color: profile.role.color}}>{profile.role.name}</p>
-                </div>
+      return (
+        <div className="relative w-full h-screen bg-gray-900 overflow-hidden">
+          <canvas ref={canvasRef} className="absolute inset-0 cursor-pointer" />
+          
+          {/* Search Bar - Top Left */}
+          <div className="absolute top-2 left-2 sm:top-4 sm:left-4 w-64 sm:w-72 md:w-80 z-10">
+            <div className="bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl border border-teal-500/30 shadow-xl">
+              <div className="flex items-center gap-2">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <input type="text" placeholder="Search members..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 bg-transparent outline-none text-xs sm:text-sm" />
+                {searchQuery && <button onClick={() => setSearchQuery('')} className="text-teal-400"><svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>}
               </div>
-              <button onClick={() => setProfile(null)} className="text-teal-400">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </div>
+            {showResults && searchResults.length > 0 && (
+              <div className="mt-2 bg-slate-900/95 backdrop-blur-sm rounded-xl border border-teal-500/30 shadow-xl max-h-48 sm:max-h-64 overflow-y-auto">
+                {searchResults.map(m => (
+                  <button key={m.id} onClick={() => jump(m.id)} className="w-full px-3 py-2 text-left hover:bg-teal-900/50 flex items-center gap-2 border-b border-teal-500/10 last:border-0">
+                    <img src={roles.find(r => r.name === m.role.name)?.icon} alt="" className="w-5 h-5" />
+                    <div className="flex-1"><p className="text-xs sm:text-sm font-semibold text-white">{m.username}</p><p className="text-xs text-teal-300">{m.role.name}</p></div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {hoveredBubble && !profile && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-teal-900/90 backdrop-blur-sm text-white px-5 py-4 rounded-xl border border-teal-500/30 shadow-xl z-20 max-w-xs pointer-events-none">
+              <div className="flex items-center gap-3"><img src={hoveredBubble.role.icon} alt="" className="w-8 h-8" /><div><p className="text-base font-bold">{hoveredBubble.username}</p><p className="text-xs text-teal-300">{hoveredBubble.role.name}</p></div></div>
+              <div className="mt-3 space-y-1 text-xs">
+                <p className="flex items-center gap-2"><span className={'w-2 h-2 rounded-full ' + (hoveredBubble.online ? 'bg-red-500' : 'bg-gray-400')}></span>{hoveredBubble.online ? 'Online' : 'Offline'}</p>
+                <p className="text-teal-300">💬 {hoveredBubble.messageCount.toLocaleString()}</p>
+                <p className="text-teal-300">📅 {hoveredBubble.joinedDaysAgo}d ago</p>
+              </div>
+              <p className="text-xs opacity-75 mt-2 pt-2 border-t border-teal-500/30">Click for profile</p>
+            </div>
+          )}
+          
+          <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 space-y-2 sm:space-y-3">
+            <div className="bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-5 sm:py-4 rounded-xl border border-teal-500/30 shadow-xl">
+              <p className="text-xs font-bold text-teal-400 mb-1 sm:mb-2">FILTER BY ROLE</p>
+              <select 
+                value={roleFilter} 
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="w-full bg-slate-800 text-white text-xs px-2 py-1 rounded border border-teal-500/30 outline-none cursor-pointer"
+              >
+                <option value="all">All Roles</option>
+                {roles.map(r => <option key={r.name} value={r.name}><img src={r.icon} alt="" className="inline w-4 h-4 mr-1" /> {r.name}</option>)}
+              </select>
+            </div>
+            
+            <div className="bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-5 sm:py-4 rounded-xl border border-teal-500/30 shadow-xl">
+              <p className="text-xs font-bold text-teal-400 mb-1 sm:mb-2">STATS</p>
+              <p className="text-xs text-teal-300">Current Batch: <span className="font-bold">{
+                (() => {
+                  const start = currentBatch * BATCH_SIZE;
+                  const end = Math.min(start + BATCH_SIZE, TOTAL);
+                  let count = 0;
+                  for (let i = start; i < end; i++) {
+                    const m = allMembers.current[i];
+                    if (roleFilter === 'all' || m.role.name === roleFilter) {
+                      count++;
+                    }
+                  }
+                  return count;
+                })()
+              }</span></p>
+              <p className="text-xs text-teal-300">Total: <span className="font-bold">{
+                roleFilter === 'all' 
+                  ? TOTAL 
+                  : allMembers.current.filter(m => m.role.name === roleFilter).length
+              }</span></p>
+            </div>
+            
+            <div className="bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-5 sm:py-4 rounded-xl border border-teal-500/30 shadow-xl">
+              <p className="text-xs font-bold text-teal-400 mb-2 sm:mb-3">ROLE LEGEND</p>
+              {roles.map(r => <div key={r.name} className="flex items-center gap-2 mb-1.5"><img src={r.icon} alt="" className="w-5 h-5" /><div className="w-8 sm:w-10 h-1.5 sm:h-2 rounded" style={{backgroundColor: r.color}}></div><span className="text-xs">{r.name}</span></div>)}
+              
+              <div className="mt-4 pt-3 border-t border-teal-500/30">
+                <p className="text-xs font-bold text-teal-400 mb-2">DISTRIBUTION</p>
+                <svg viewBox="0 0 100 100" className="w-20 h-20 mx-auto"> {/* Reduced size to avoid overlap */}
+                  {(() => {
+                    const visibleMembers = roleFilter === 'all' 
+                      ? allMembers.current 
+                      : allMembers.current.filter(m => m.role.name === roleFilter);
+                    
+                    const roleCounts = roles.map(r => ({
+                      ...r,
+                      count: visibleMembers.filter(m => m.role.name === r.name).length
+                    }));
+                    
+                    const total = visibleMembers.length || 1;
+                    let currentAngle = -90;
+                    
+                    return roleCounts.filter(r => r.count > 0).map((r, i) => {
+                      const percentage = (r.count / total) * 100;
+                      const angle = (percentage / 100) * 360;
+                      const startAngle = currentAngle * Math.PI / 180;
+                      const endAngle = (currentAngle + angle) * Math.PI / 180;
+                      
+                      const x1 = 50 + 35 * Math.cos(startAngle);
+                      const y1 = 50 + 35 * Math.sin(startAngle);
+                      const x2 = 50 + 35 * Math.cos(endAngle);
+                      const y2 = 50 + 35 * Math.sin(endAngle);
+                      
+                      const largeArc = angle > 180 ? 1 : 0;
+                      const path = `M 50 50 L ${x1} ${y1} A 35 35 0 ${largeArc} 1 ${x2} ${y2} Z`;
+                      
+                      currentAngle += angle;
+                      
+                      return (
+                        <g key={r.name}>
+                          <path d={path} fill={r.color} opacity="0.8" />
+                          <title>{r.name}: {percentage.toFixed(1)}%</title>
+                        </g>
+                      );
+                    });
+                  })()}
+                  <circle cx="50" cy="50" r="20" fill="#0a1628" />
                 </svg>
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="bg-teal-900/30 p-3 rounded-lg">
-                <p className="text-teal-300 text-xs">Messages</p>
-                <p className="text-xl font-bold">{profile.messageCount.toLocaleString()}</p>
               </div>
-              <div className="bg-teal-900/30 p-3 rounded-lg">
-                <p className="text-teal-300 text-xs">Joined</p>
-                <p className="text-xl font-bold">{profile.joinedDaysAgo}d ago</p>
-              </div>
-              {profile.xProfile && (
-                <div className="bg-teal-900/30 p-3 rounded-lg col-span-2">
-                  <p className="text-teal-300 text-xs">Twitter</p>
-                  <p className="text-base font-bold">{profile.xProfile}</p>
-                </div>
-              )}
             </div>
           </div>
+          
+          <div className="absolute top-1/2 left-2 sm:left-4 -translate-y-1/2 flex flex-col gap-2 sm:gap-3 z-10">
+            <button onClick={prev} className="bg-slate-900/90 backdrop-blur-sm text-white p-2 sm:p-3 rounded-full border-2 border-teal-500/40 hover:bg-teal-900/90 shadow-lg"><svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg></button>
+            <div className="bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl border-2 border-teal-500/40 text-center shadow-lg"><p className="text-xs text-teal-300 font-semibold">BATCH</p><p className="text-base sm:text-lg font-bold">{currentBatch + 1}<span className="text-xs sm:text-sm text-teal-400">/{batches}</span></p></div>
+            <button onClick={next} className="bg-slate-900/90 backdrop-blur-sm text-white p-2 sm:p-3 rounded-full border-2 border-teal-500/40 hover:bg-teal-900/90 shadow-lg"><svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></button>
+          </div>
+          
+          <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-5 sm:py-4 rounded-xl border border-teal-500/30 shadow-xl space-y-2 sm:space-y-3 z-10">
+            <p className="text-xs font-bold text-teal-400 mb-1 sm:mb-2">CONTROLS</p>
+            <label className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm cursor-pointer"><input type="checkbox" checked={connections} onChange={(e) => setConnections(e.target.checked)} className="w-3 h-3 sm:w-4 sm:h-4" />Lines</label>
+            <label className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm cursor-pointer"><input type="checkbox" checked={particles} onChange={(e) => setParticles(e.target.checked)} className="w-3 h-3 sm:w-4 sm:h-4" />Particles</label>
+            <button onClick={() => { setOffsetX(0); setOffsetY(0); }} className="w-full bg-teal-600 hover:bg-teal-700 text-white py-1.5 px-3 sm:py-2 sm:px-4 rounded-lg text-xs sm:text-sm font-semibold">Reset View</button>
+          </div>
+          
+          <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 bg-slate-900/90 backdrop-blur-sm text-white px-3 py-2 sm:px-5 sm:py-3 rounded-xl border border-teal-500/30 shadow-xl z-10">
+            <p className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+              <img src="/assets/stork-logo.png" alt="Stork" className="w-5 h-5" onError={(e) => e.target.style.display = 'none'} />
+              <span className="font-semibold">Stork Community Galaxy</span>
+            </p>
+            <p className="text-xs text-teal-300 mt-0.5 sm:mt-1">← → arrows • Drag to pan • R to reset</p>
+          </div>
+          
+          {profile && (
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setProfile(null)}>
+              <div className="bg-slate-900/95 backdrop-blur-sm text-white p-6 rounded-2xl border-2 border-teal-500/50 shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-3">
+                    <img src={profile.role.icon} alt="" className="w-10 h-10" />
+                    <div>
+                      <h2 className="text-2xl font-bold">{profile.username}</h2>
+                      <p className="text-sm" style={{color: profile.role.color}}>{profile.role.name}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setProfile(null)} className="text-teal-400">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="bg-teal-900/30 p-3 rounded-lg">
+                    <p className="text-teal-300 text-xs">Messages</p>
+                    <p className="text-xl font-bold">{profile.messageCount.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-teal-900/30 p-3 rounded-lg">
+                    <p className="text-teal-300 text-xs">Joined</p>
+                    <p className="text-xl font-bold">{profile.joinedDaysAgo}d ago</p>
+                  </div>
+                  {profile.xProfile && (
+                    <div className="bg-teal-900/30 p-3 rounded-lg col-span-2">
+                      <p className="text-teal-300 text-xs">Twitter</p>
+                      <p className="text-base font-bold">{profile.xProfile}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  );
-}
+      );
+    }
+
+    ReactDOM.render(<CommunityBubbles />, document.getElementById('root'));
+  </script>
+</body>
+</html>
